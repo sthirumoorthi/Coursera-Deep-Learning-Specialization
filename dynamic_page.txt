@@ -1,0 +1,41 @@
+import re
+from bs4 import BeautifulSoup
+
+def remove_dynamic_content(html):
+    # Parse the HTML document using BeautifulSoup
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # Remove all script tags and their contents
+    for script in soup.find_all('script'):
+        script.extract()
+
+    # Remove all elements with inline event handlers
+    for element in soup.find_all():
+        for attribute in element.attrs:
+            if attribute.startswith('on'):
+                del element[attribute]
+
+    # Remove all elements with certain attributes that indicate dynamic content
+    for element in soup.find_all(['iframe', 'embed', 'object', 'audio', 'video', 'source', 'canvas', 'track']):
+        element.extract()
+
+    # Remove all elements with a CSS class or ID that indicates dynamic content
+    dynamic_classes = ['ad', 'advertisement', 'banner', 'cookie', 'pop', 'promo', 'teaser', 'widget']
+    for cls in dynamic_classes:
+        for element in soup.find_all(class_=re.compile(cls, re.IGNORECASE)):
+            element.extract()
+        for element in soup.find_all(id=re.compile(cls, re.IGNORECASE)):
+            element.extract()
+
+    # Remove all elements with certain attributes that are commonly used for tracking or analytics
+    tracking_attributes = ['data-', 'ga-', 'google', 'fb-', 'twitter-', 'pinterest-', 'linkedin-', 'adobe-', 'segment-', 'mixpanel-', 'optimizely-', 'criteo-', 'krux-', 'scorecardresearch-', 'taboola-', 'outbrain-']
+    for attribute in tracking_attributes:
+        for element in soup.find_all(attrs={re.compile(attribute, re.IGNORECASE): True}):
+            element.extract()
+
+    # Remove all elements that are hidden by default or have a hidden CSS class
+    for element in soup.find_all(['style', lambda tag: 'display:none' in tag.get('style', ''), lambda tag: 'hidden' in tag.get('class', '')]):
+        element.extract()
+
+    # Return the modified HTML document as a string
+    return str(soup)
